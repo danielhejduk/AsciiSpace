@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"net"
 	"strings"
-	"time"
 )
 
 const CLEAR_BLUE = "\033[104m\033[2J\033[H" // Makes blue background, clears the screen and moves cursor to top left
@@ -32,7 +31,7 @@ type Client struct {
     ip string
 }
 
-type Player struct {
+type Player struct { // x,y starts with 0,0 but ANSI starts with 1,1
     x int
     y int
 
@@ -42,12 +41,14 @@ type Player struct {
     health int
 }
 
+var game Game
+
 func main() {
     println("[INFO] AsciiSpace server is setting up")
 
     ln, err := net.Listen("tcp", ":8080")
     if err != nil {
-        println(err)
+        println("[ERROR]", err)
         return
     }
 
@@ -56,7 +57,7 @@ func main() {
     for {
         conn, err := ln.Accept()
         if err != nil {
-            println(err)
+            println("[ERROR]", err)
             continue
         }
 
@@ -95,23 +96,42 @@ func handleConnection(client Client) {
 func HandleGame(client Client, player Player) {
     reader := bufio.NewReader(client.conn)
 
-    client.conn.Write([]byte(CLEAR_BLACK))
-
     for {
+        client.conn.Write([]byte(CLEAR_BLACK))
+
+        game.printPlayer(client, player)
+
         key, err := reader.ReadByte()
 
+        if err != nil {
+            println("[ERROR]", client.ip, "->", "Something has happend during reading the key")
+            return
+        }
+        
         player.key = key
+
+        println("[INFO]", client.ip, "->", string(player.key))
 
         if player.key == 'q' {
             return
+        } else if player.key == 'd' {
+            player.x++
+        } else if player.key == 's' {
+            player.y++
+        } else if player.key == 'a' {
+            if player.x == 0 {
+                continue
+            } else {
+                player.x--
+            }
+        } else if player.key == 'w' {
+            if player.y == 0 {
+                continue
+            } else {
+                player.y--
+            }
         }
 
-        if err != nil {
-            println("[INFO]", client.ip, "->", "Something has happend during reading the key")
-            return
-        }
-
-        println(string(player.key))
     }
 }
 
@@ -146,7 +166,6 @@ func LoginMenu(client Client) (string, string, byte) {
         return "", "", byte(0)
     }
     password := strings.ToLower(strings.TrimSpace(string(tpassword)))
-    time.Sleep(time.Second * 2)
 
     client.conn.Write([]byte{IAC, WILL, SUPGO, IAC, WONT, ECHO})
 
