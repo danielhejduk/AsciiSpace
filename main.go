@@ -117,7 +117,7 @@ func handleConnection(client Client) {
         return
     }
 
-    gamejolt.AddTrophy(username, password, 239682) // TODO(#1): Add modifiable trophy system
+    gamejolt.AddTrophy(username, password, TROPHY_LOGIN)
 
     player.answer = byte(answer)
 
