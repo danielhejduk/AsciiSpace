@@ -5,7 +5,11 @@ import (
 	"crypto/sha512"
 	"encoding/base64"
 	"net"
+	"os"
 	"strings"
+    "strconv"
+
+    "github.com/joho/godotenv"
 )
 
 const CLEAR_BLUE = "\033[104m\033[2J\033[H" // Makes blue background, clears the screen and moves cursor to top left
@@ -39,9 +43,29 @@ type Player struct { // x,y starts with 0,0 but ANSI starts with 1,1
     answer byte
 
     health int
+    planetmap [100][100]byte
 }
 
 var game Game
+var gamejolt Gamejolt
+
+func get_gamejolt_credentials() (string, int) {
+    err := godotenv.Load(".env")
+    if err != nil{
+        println("Error loading .env file:", err)
+    }
+
+    gamejolt_priv := os.Getenv("GAMEJOLT_KEY")
+    idstr := os.Getenv("GAMEJOLT_ID")
+
+    gamejolt_gameid, err := strconv.Atoi(idstr)
+    if err != nil {
+        println("[ERROR] Something has happend:", err)
+    }
+
+    return gamejolt_priv, gamejolt_gameid
+}
+
 
 func main() {
     println("[INFO] AsciiSpace server is setting up")
@@ -63,6 +87,11 @@ func main() {
 
         var client Client
 
+        priv_key, gameid := get_gamejolt_credentials()
+        println(gameid)
+        gamejolt.privatekey = priv_key
+        gamejolt.gameid = gameid
+
         client.conn = conn
         client.ip = client.conn.RemoteAddr().String()
 
@@ -83,6 +112,9 @@ func handleConnection(client Client) {
     if username == "" || password == "" {
         return
     }
+
+    gamejolt.LoginPlayer(username, password)
+    gamejolt.AddTrophy(username, password, 239682) // TODO: Add modifiable trophy system
 
     player.answer = byte(answer)
 
@@ -171,7 +203,7 @@ func LoginMenu(client Client) (string, string, byte) {
 
     _, err = client.conn.Read(telnetans) // We are reading the telnet answer to the line buffering
 
-    client.conn.Write([]byte("\033[4;2HAnswer?"))
+    client.conn.Write([]byte("\033[4;2HIs this Gamejolt Login?"))
     answer, err = reader.ReadByte()
     if err != nil {
         println("[INFO]", client.ip, "->", "Something has happend during reading the answer")
