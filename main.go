@@ -1,12 +1,10 @@
 package main
 
 import (
-	"bufio"
-	"crypto/sha512"
-	"encoding/base64"
-	"net"
-	"os"
-	"strings"
+    "bufio"
+    "net"
+    "os"
+    "strings"
     "strconv"
 
     "github.com/joho/godotenv"
@@ -43,7 +41,7 @@ type Player struct { // x,y starts with 0,0 but ANSI starts with 1,1
     answer byte
 
     health int
-    planetmap [100][100]byte
+    planetmap [40][40]byte
 }
 
 var game Game
@@ -88,7 +86,6 @@ func main() {
         var client Client
 
         priv_key, gameid := get_gamejolt_credentials()
-        println(gameid)
         gamejolt.privatekey = priv_key
         gamejolt.gameid = gameid
 
@@ -113,14 +110,16 @@ func handleConnection(client Client) {
         return
     }
 
-    gamejolt.LoginPlayer(username, password)
-    gamejolt.AddTrophy(username, password, 239682) // TODO: Add modifiable trophy system
+    success := gamejolt.LoginPlayer(username, password)
+
+    if !success {
+        println("[INFO]", client.ip + "->", "User entered wrong gamejolt credintals")
+        return
+    }
+
+    gamejolt.AddTrophy(username, password, 239682) // TODO(#1): Add modifiable trophy system
 
     player.answer = byte(answer)
-
-    hashpassword := sha512.Sum512([]byte(password))
-
-    println(base64.StdEncoding.EncodeToString(hashpassword[:]))
 
     HandleGame(client, player)
 }
