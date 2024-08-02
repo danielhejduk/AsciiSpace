@@ -1,13 +1,13 @@
 package main
 
 import (
-    "bufio"
-    "net"
-    "os"
-    "strings"
-    "strconv"
+	"bufio"
+	"net"
+	"os"
+	"strconv"
+	"strings"
 
-    "github.com/joho/godotenv"
+	"github.com/joho/godotenv"
 )
 
 const CLEAR_BLUE = "\033[104m\033[2J\033[H" // Makes blue background, clears the screen and moves cursor to top left
@@ -38,10 +38,8 @@ type Player struct { // x,y starts with 0,0 but ANSI starts with 1,1
     y int
 
     key byte
-    answer byte
 
     health int
-    planetmap [40][40]byte
 }
 
 var game Game
@@ -104,7 +102,7 @@ func handleConnection(client Client) {
 
     client.conn.Write([]byte(CLEAR_BLUE))
 
-    username, password, answer := LoginMenu(client)
+    username, password := LoginMenu(client)
 
     if username == "" || password == "" {
         return
@@ -119,20 +117,21 @@ func handleConnection(client Client) {
 
     gamejolt.AddTrophy(username, password, TROPHY_LOGIN)
 
-    player.answer = byte(answer)
-
     HandleGame(client, player)
 }
 
 func HandleGame(client Client, player Player) {
     reader := bufio.NewReader(client.conn)
 
+    var terrain TERRAIN
+
+    terrain.generate_map()
+
     for {
-        client.conn.Write([]byte(CLEAR_BLACK))
+        key, err := reader.ReadByte()
 
         game.printPlayer(client, player)
-
-        key, err := reader.ReadByte()
+        terrain.render_map(client)
 
         if err != nil {
             println("[ERROR]", client.ip, "->", "Something has happend during reading the key")
@@ -166,14 +165,13 @@ func HandleGame(client Client, player Player) {
     }
 }
 
-func LoginMenu(client Client) (string, string, byte) {
+func LoginMenu(client Client) (string, string) {
     var x int = 1
     reader := bufio.NewReader(client.conn)
 
     tusername := make([]byte, 15)
     tpassword := make([]byte, 15)
     telnetans := make([]byte, 3)
-    var answer byte
 
     client.conn.Write([]byte("/" + MENU_DASHES + "\\\n"))
     for x < 6 { // 5 Steps
@@ -186,7 +184,7 @@ func LoginMenu(client Client) (string, string, byte) {
     tusername, _, err := reader.ReadLine()
     if err != nil {
         println("[INFO]", client.ip, "->", "Something has happend during reading username")
-        return "", "", byte(0)
+        return "", ""
     }
     username := strings.ToLower(strings.TrimSpace(string(tusername)))
 
@@ -194,7 +192,7 @@ func LoginMenu(client Client) (string, string, byte) {
     tpassword, _, err = reader.ReadLine()
     if err != nil {
         println("[INFO]", client.ip, "->", "Something has happend during reading password")
-        return "", "", byte(0)
+        return "", ""
     }
     password := strings.ToLower(strings.TrimSpace(string(tpassword)))
 
@@ -202,11 +200,11 @@ func LoginMenu(client Client) (string, string, byte) {
 
     _, err = client.conn.Read(telnetans) // We are reading the telnet answer to the line buffering
 
-    client.conn.Write([]byte("\033[4;2HIs this Gamejolt Login?"))
-    answer, err = reader.ReadByte()
+    client.conn.Write([]byte("\033[4;2HPress any key to continue"))
+    _, err = reader.ReadByte()
     if err != nil {
         println("[INFO]", client.ip, "->", "Something has happend during reading the answer")
     }
     
-    return string(username), string(password), answer
+    return string(username), string(password)
 }
