@@ -13,8 +13,8 @@ import (
 const CLEAR_BLUE = "\033[104m\033[2J\033[H" // Makes blue background, clears the screen and moves cursor to top left
 const CLEAR_BLACK = "\033[40m\033[2J\033[H"
 
-const MENU_DASHES = "------------------------" // 24 Dashes
-const MENU_SPACES = "                        " // 24 Spaces
+const MENU_DASHES = "----------------------------------------" // 40 Dashes
+const MENU_SPACES = "                                        " // 40 Spaces
 
 const (
 	IAC   = 255 // Interpret as Command
@@ -31,15 +31,6 @@ const (
 type Client struct {
     conn net.Conn
     ip string
-}
-
-type Player struct { // x,y starts with 0,0 but ANSI starts with 1,1
-    x int
-    y int
-
-    key byte
-
-    health int
 }
 
 var game Game
@@ -128,40 +119,21 @@ func HandleGame(client Client, player Player) {
     terrain.generate_map()
 
     for {
-        key, err := reader.ReadByte()
-
-        game.printPlayer(client, player)
         terrain.render_map(client)
+        terrain.print_player(client, player)
 
+        key, err := reader.ReadByte()
+        
         if err != nil {
             println("[ERROR]", client.ip, "->", "Something has happend during reading the key")
             return
         }
         
         player.key = key
-
-        println("[INFO]", client.ip, "->", string(player.key))
-
-        if player.key == 'q' {
+        quit_signal := player.handle_controls()
+        if quit_signal {
             return
-        } else if player.key == 'd' {
-            player.x++
-        } else if player.key == 's' {
-            player.y++
-        } else if player.key == 'a' {
-            if player.x == 0 {
-                continue
-            } else {
-                player.x--
-            }
-        } else if player.key == 'w' {
-            if player.y == 0 {
-                continue
-            } else {
-                player.y--
-            }
         }
-
     }
 }
 
@@ -188,7 +160,7 @@ func LoginMenu(client Client) (string, string) {
     }
     username := strings.ToLower(strings.TrimSpace(string(tusername)))
 
-    client.conn.Write([]byte("\033[3;2HPassword:"))
+    client.conn.Write([]byte("\033[3;2HGame Token:"))
     tpassword, _, err = reader.ReadLine()
     if err != nil {
         println("[INFO]", client.ip, "->", "Something has happend during reading password")

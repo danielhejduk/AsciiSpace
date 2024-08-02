@@ -1,6 +1,7 @@
 package main
 
 import (
+    "fmt"
 )
 
 type BLOCK int
@@ -13,6 +14,10 @@ const (
     BLOCK_BLANK BLOCK = iota
     BLOCK_PLAYER
     BLOCK_ROCK
+)
+
+const (
+    MOVE_TO_LEFT = "\033[H"
 )
 
 func get_block_string(block BLOCK) string {
@@ -33,17 +38,27 @@ func (terrain *TERRAIN) generate_map() {
 }
 
 func (terrain *TERRAIN) render_map(client Client) {
-    var x,y int = 1,1
+    var x,y int = 0,0
 
     client.conn.Write([]byte(CLEAR_BLACK))
 
-    for y < 21 {
-        for x < 21 {
-            var block string = get_block_string(terrain.planetmap[x-1][y-1])
+    for y < 20 {
+        x = 0
+        for x < 20 {
+            var block string = get_block_string(terrain.planetmap[x][y])
             client.conn.Write([]byte(block))
             x++
         }
         client.conn.Write([]byte("\n"))
         y++
     }
+}
+
+func (terrain *TERRAIN) print_player(client Client, player Player) {
+    var buf string
+
+    buf = fmt.Sprintf("\033[%d;%dH@", player.y+1, player.x+1)
+
+    client.conn.Write([]byte(buf))
+    client.conn.Write([]byte(MOVE_TO_LEFT))    
 }
