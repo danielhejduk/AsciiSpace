@@ -12,6 +12,6 @@ go build .
 
 TODO list:
 - [ ] Procedural generation
-- [ ] Collisions
+- [X] Collisions
 - [ ] Inventory
 - [ ] Multiplayer features
