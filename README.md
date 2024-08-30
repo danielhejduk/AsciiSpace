@@ -9,3 +9,9 @@ echo "GAMEJOLT_ID=<gamejolt id of your game>" >> .env
 echo "GAMEJOLT_KEY=<private key to that game>" >> .env
 go build .
 ```
+
+TODO list:
+- [ ] Procedural generation
+- [ ] Collisions
+- [ ] Inventory
+- [ ] Multiplayer features

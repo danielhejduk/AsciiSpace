@@ -36,10 +36,11 @@ type Client struct {
 var game Game
 var gamejolt Gamejolt
 
-func get_gamejolt_credentials() (string, int) {
+func get_gamejolt_credentials() (string, int, bool) {
     err := godotenv.Load(".env")
     if err != nil{
         println("Error loading .env file:", err)
+        return "", 0, false
     }
 
     gamejolt_priv := os.Getenv("GAMEJOLT_KEY")
@@ -48,9 +49,10 @@ func get_gamejolt_credentials() (string, int) {
     gamejolt_gameid, err := strconv.Atoi(idstr)
     if err != nil {
         println("[ERROR] Something has happend:", err)
+        return "", 0, false
     }
 
-    return gamejolt_priv, gamejolt_gameid
+    return gamejolt_priv, gamejolt_gameid, true
 }
 
 
@@ -63,6 +65,16 @@ func main() {
         return
     }
 
+    priv_key, gameid, success := get_gamejolt_credentials()
+
+    if !success {
+        println("[ERROR] Something has happend getting Gamejolt credentials")
+        return
+    }
+
+    gamejolt.privatekey = priv_key
+    gamejolt.gameid = gameid
+
     println("[INFO] AsciiSpace server is running")
 
     for {
@@ -73,10 +85,6 @@ func main() {
         }
 
         var client Client
-
-        priv_key, gameid := get_gamejolt_credentials()
-        gamejolt.privatekey = priv_key
-        gamejolt.gameid = gameid
 
         client.conn = conn
         client.ip = client.conn.RemoteAddr().String()
@@ -120,6 +128,7 @@ func HandleGame(client Client, player Player) {
 
     for {
         terrain.render_map(client)
+        terrain.collision_handling(client, player)
         terrain.print_player(client, player)
 
         key, err := reader.ReadByte()
@@ -130,7 +139,7 @@ func HandleGame(client Client, player Player) {
         }
         
         player.key = key
-        quit_signal := player.handle_controls()
+        quit_signal := player.handle_controls(terrain)
         if quit_signal {
             return
         }

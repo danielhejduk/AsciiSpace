@@ -14,6 +14,7 @@ const (
     BLOCK_BLANK BLOCK = iota
     BLOCK_PLAYER
     BLOCK_ROCK
+    BLOCK_KILL
 )
 
 const (
@@ -28,6 +29,8 @@ func get_block_string(block BLOCK) string {
             return "@"
         case BLOCK_ROCK: // ROCK BLOCK (SOLID BLOCK)
             return "="
+	case BLOCK_KILL: // KILL TESTING BLOCK
+            return "\033[31m&\033[0m"
         default:
             return "" // THIS SHOULD NOT HAPPEN
     }
@@ -35,6 +38,7 @@ func get_block_string(block BLOCK) string {
 
 func (terrain *TERRAIN) generate_map() {
     terrain.planetmap[4][4] = BLOCK_ROCK
+    terrain.planetmap[5][5] = BLOCK_KILL
 }
 
 func (terrain *TERRAIN) render_map(client Client) {
@@ -61,4 +65,18 @@ func (terrain *TERRAIN) print_player(client Client, player Player) {
 
     client.conn.Write([]byte(buf))
     client.conn.Write([]byte(MOVE_TO_LEFT))    
+}
+
+func (terrain *TERRAIN) is_solid(x int, y int) bool {
+	switch (terrain.planetmap[x][y]) {
+		case BLOCK_ROCK:
+			return true
+	}
+	return false
+}
+
+func (terrain *TERRAIN) collision_handling(client Client, player Player) {
+    if terrain.planetmap[player.x][player.y] == BLOCK_KILL {
+        client.conn.Close()
+    }
 }
